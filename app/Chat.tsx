@@ -152,6 +152,7 @@ export default function Chat() {
           gap={2}
           paddingBottom="150px"
           maxW={1100}
+          w="full"
           margin="0 auto"
         >
           <Heading as="h1" size="lg">
