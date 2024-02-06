@@ -17,6 +17,8 @@ import { Fragment, useRef, useState } from 'react';
 import { FaPaperPlane } from 'react-icons/fa';
 import { BsGithub } from 'react-icons/bs';
 import { VscRefresh } from 'react-icons/vsc';
+import { FaHatWizard } from "react-icons/fa";
+
 import Markdown from './components/Markdown';
 
 const UserAvatar = () => {
@@ -31,10 +33,10 @@ const AssistantAvatar = () => {
   return (
     <Flex flexShrink={0}>
       <Avatar
-        src="https://avatars.githubusercontent.com/u/3722405?v=4"
+        icon={<FaHatWizard/>}
         size="sm"
         color="white"
-        bg="blue.500"
+        bg="purple.500"
         borderRadius="8px"
         name="GPT"
         mt={1}
