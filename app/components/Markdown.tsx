@@ -37,7 +37,7 @@ const Markdown = forwardRef<HTMLDivElement, MarkdownProps>(
           components={{
             code({ inline, className, children, ...props }) {
               const match = /language-(\w+)/.exec(className || '');
-              return !inline && match ? (
+              return !inline ? (
                 <SyntaxHighlighter
                   {...props}
                   style={{
@@ -48,11 +48,11 @@ const Markdown = forwardRef<HTMLDivElement, MarkdownProps>(
                       padding: 15,
                       marginTop: 15,
                       marginBottom: 15,
-                      width: '100%',
+                      // width: '100%',
                     },
                   }}
                   PreTag={Code}
-                  language={match[1]}
+                  language={!match || match[1] === null ? 'text' : match[1]}
                 >
                   {String(children).replace(/\n$/, '')}
                 </SyntaxHighlighter>
