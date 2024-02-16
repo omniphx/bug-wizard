@@ -2,7 +2,7 @@ import App from './App';
 import Chat from './Chat';
 
 export const metadata = {
-  title: 'Matthew Mitchener | ResumeGPT',
+  title: 'Bug Wizard',
 };
 
 export default function Home() {

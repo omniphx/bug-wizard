@@ -14,6 +14,7 @@ export async function POST(req: Request) {
         messages: [
           {
             role: 'system',
+            // TODO add embeddings here
             content: `You are a debugging wizard! 🧙‍♂️`,
           },
           ...messages,
@@ -23,6 +24,7 @@ export async function POST(req: Request) {
         stream: true,
       }),
     });
+
 
     return new Response(res.body, {
       headers: {
