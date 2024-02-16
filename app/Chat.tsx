@@ -17,7 +17,7 @@ import { Fragment, useRef, useState } from 'react';
 import { FaPaperPlane } from 'react-icons/fa';
 import { BsGithub } from 'react-icons/bs';
 import { VscRefresh } from 'react-icons/vsc';
-import { FaHatWizard } from "react-icons/fa";
+import { FaHatWizard } from 'react-icons/fa';
 
 import Markdown from './components/Markdown';
 
@@ -33,12 +33,11 @@ const AssistantAvatar = () => {
   return (
     <Flex flexShrink={0}>
       <Avatar
-        icon={<FaHatWizard/>}
+        icon={<FaHatWizard />}
         size="sm"
         color="white"
         bg="purple.500"
         borderRadius="8px"
-        name="GPT"
         mt={1}
       />
     </Flex>
