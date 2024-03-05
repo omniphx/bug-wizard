@@ -93,22 +93,26 @@ export default function Chat() {
                 if (prepData === '[DONE]') {
                   setIsLoading(false);
                 } else {
-                  const jsonData = JSON.parse(prepData);
-                  if (jsonData.choices) {
-                    const { content, role } = jsonData.choices[0].delta;
-
-                    if (role === 'assistant') {
-                      newMessages = [...newMessages, { role, content }];
-                      setMessages(newMessages);
-                    } else if (!!content) {
-                      const lastMessage = newMessages[newMessages.length - 1];
-                      lastMessage.content += content;
-                      setMessages([...newMessages.slice(0, newMessages.length - 1), lastMessage]);
+                  try {
+                    const jsonData = JSON.parse(prepData);
+                    if (jsonData.choices) {
+                      const { content, role } = jsonData.choices[0].delta;
+  
+                      if (role === 'assistant') {
+                        newMessages = [...newMessages, { role, content }];
+                        setMessages(newMessages);
+                      } else if (!!content) {
+                        const lastMessage = newMessages[newMessages.length - 1];
+                        lastMessage.content += content;
+                        setMessages([...newMessages.slice(0, newMessages.length - 1), lastMessage]);
+                      }
                     }
+                  } catch(error) {
+                    console.error('Error parsing JSON', error);
                   }
                 }
               } catch (e) {
-                console.error('Error parsing JSON', e);
+                console.error('Error handling data', e);
               }
             });
             reader.read().then(processResult);
