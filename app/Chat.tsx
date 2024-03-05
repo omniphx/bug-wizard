@@ -74,9 +74,6 @@ export default function Chat() {
       }
 
       if (response.body) {
-        console.log('response.body', response.body);
-        // const data = await response.json();
-        // setMessages(data.messages);
         const reader = response.body.getReader();
         reader.read().then(function processResult(result) {
           const decoder = new TextDecoder();

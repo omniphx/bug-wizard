@@ -1,6 +1,5 @@
 {
-  "name": "bug-wizard",
-  "packageManager": "yarn@4.1.0",
+  "name": "matthew-mitchener.me",
   "version": "0.1.0",
   "private": true,
   "scripts": {
