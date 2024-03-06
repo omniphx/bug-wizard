@@ -55,7 +55,7 @@ export default function Chat() {
   const [isLoading, setIsLoading] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = async (): Promise<void> => {
     try {
       setIsLoading(true);
       setMessage('');
@@ -75,49 +75,62 @@ export default function Chat() {
 
       if (response.body) {
         const reader = response.body.getReader();
-        reader.read().then(function processResult(result) {
-          const decoder = new TextDecoder();
-          let chunk = '';
-          chunk += decoder.decode(result.value, { stream: true });
-          console.log(chunk);
+        let incompleteChunk = ''; // Buffer to hold incomplete data
 
-          // Split chunk into individual data objects
-          const dataObjects = chunk.split('\n').filter(Boolean);
-          if (dataObjects.length === 0) {
-            reader.cancel();
-          } else {
-            // Process latest data object
-            dataObjects.forEach((data) => {
-              try {
-                const prepData = data.replace(/^data: /, '');
-                if (prepData === '[DONE]') {
-                  setIsLoading(false);
-                } else {
-                  try {
-                    const jsonData = JSON.parse(prepData);
-                    if (jsonData.choices) {
-                      const { content, role } = jsonData.choices[0].delta;
-  
-                      if (role === 'assistant') {
-                        newMessages = [...newMessages, { role, content }];
-                        setMessages(newMessages);
-                      } else if (!!content) {
-                        const lastMessage = newMessages[newMessages.length - 1];
-                        lastMessage.content += content;
-                        setMessages([...newMessages.slice(0, newMessages.length - 1), lastMessage]);
-                      }
-                    }
-                  } catch(error) {
-                    console.error('Error parsing JSON', error);
-                  }
-                }
-              } catch (e) {
-                console.error('Error handling data', e);
-              }
-            });
-            reader.read().then(processResult);
+        const processResult = async ({
+          done,
+          value,
+        }: {
+          done: boolean;
+          value?: Uint8Array;
+        }): Promise<void> => {
+          if (done) {
+            console.log('Stream finished.');
+            setIsLoading(false);
+            return;
           }
-        });
+
+          const decoder = new TextDecoder();
+          let chunk = incompleteChunk + decoder.decode(value, { stream: true });
+          let dataObjects = chunk.split('\n');
+
+          // Check if the last object is complete
+          if (!chunk.endsWith('\n')) {
+            incompleteChunk = dataObjects.pop() || ''; // Save incomplete chunk for next iteration
+          } else {
+            incompleteChunk = ''; // Reset if all chunks are complete
+          }
+
+          dataObjects = dataObjects
+            .filter(Boolean)
+            .map((data) => data.replace(/^data: /, ''))
+            .filter((item) => item !== '[DONE]');
+
+          dataObjects.forEach((data) => {
+            try {
+              console.log('Data:', data);
+              const jsonData = JSON.parse(data);
+              if (jsonData.choices) {
+                const { content, role } = jsonData.choices[0].delta;
+
+                if (role === 'assistant') {
+                  newMessages = [...newMessages, { role, content }];
+                  setMessages(newMessages);
+                } else if (content) {
+                  const lastMessage = newMessages[newMessages.length - 1];
+                  lastMessage.content += content;
+                  setMessages([...newMessages.slice(0, -1), lastMessage]);
+                }
+              }
+            } catch (error) {
+              console.error('Error parsing JSON', error);
+            }
+          });
+
+          reader.read().then(processResult);
+        };
+
+        reader.read().then(processResult);
       }
     } catch (error) {
       console.error('Error:', error);
@@ -166,11 +179,6 @@ export default function Chat() {
           <Text as="p" textAlign="center">
             Bugs shall not pass!! 🐛
           </Text>
-          <Link href="https://github.com/omniphx/resume-gpt" isExternal>
-            <Flex align="center" gap={2} fontWeight="600" mb={2}>
-              <BsGithub /> View this project on github
-            </Flex>
-          </Link>
           {messages.map((message, index) => (
             <Fragment key={index}>
               <Divider />
