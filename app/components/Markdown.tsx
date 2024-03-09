@@ -48,10 +48,10 @@ const Markdown = forwardRef<HTMLDivElement, MarkdownProps>(
                       padding: 15,
                       marginTop: 15,
                       marginBottom: 15,
-                      // width: '100%',
                     },
                   }}
                   PreTag={Code}
+                  wrapLongLines={true}
                   language={!match || match[1] === null ? 'text' : match[1]}
                 >
                   {String(children).replace(/\n$/, '')}
