@@ -1,47 +1,36 @@
+import OpenAI from 'openai';
+import { OpenAIStream, StreamingTextResponse } from 'ai';
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
 export const runtime = 'edge';
 
 export async function POST(req: Request) {
   try {
     const { messages } = await req.json();
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            // TODO add embeddings here
-            content: `You are a debugging wizard! 🧙‍♂️`,
-          },
-          ...messages,
-        ],
-        max_tokens: 512,
-        temperature: 0.75,
-        stream: true,
-      }),
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a staff software engineer with 10+ years of experience working in FAANG companies. Your task today is to help developers with questions about the codebase. Please answer the question below based on the codebase context provided.',
+        },
+        ...messages,
+      ],
+      stream: true,
+      temperature: 0.75,
     });
 
-
-    return new Response(res.body, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'text/event-stream;charset=utf-8',
-        'Cache-Control': 'no-cache, no-transform',
-        'X-Accel-Buffering': 'no',
-      },
-    });
-  } catch (error: any) {
+    const stream = OpenAIStream(response);
+    return new StreamingTextResponse(stream);
+  } catch (error) {
     console.error(error);
-
-    return new Response(JSON.stringify(error), {
+    return new Response(JSON.stringify({ error: (error as Error)?.message}), {
       status: 400,
-      headers: {
-        'content-type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 }
+

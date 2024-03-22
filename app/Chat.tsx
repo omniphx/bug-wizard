@@ -1,4 +1,5 @@
 'use client';
+import { useChat } from 'ai/react';
 import {
   Avatar,
   Box,
@@ -7,149 +8,75 @@ import {
   Heading,
   IconButton,
   InputGroup,
-  InputRightElement,
-  Link,
-  Stack,
   Text,
+  InputRightElement,
+  Stack,
   Textarea,
 } from '@chakra-ui/react';
-import { Fragment, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { FaPaperPlane } from 'react-icons/fa';
-import { BsGithub } from 'react-icons/bs';
-import { VscRefresh } from 'react-icons/vsc';
+import { VscRefresh, VscTrash } from 'react-icons/vsc';
 import { FaHatWizard } from 'react-icons/fa';
 
 import Markdown from './components/Markdown';
 
-const UserAvatar = () => {
-  return (
-    <Flex flexShrink={0}>
-      <Avatar size="sm" color="white" bg="blue.500" borderRadius="8px" mt={1} />
-    </Flex>
-  );
-};
+const UserAvatar = () => (
+  <Flex flexShrink={0}>
+    <Avatar size="sm" color="white" bg="blue.500" borderRadius="8px" mt={1} />
+  </Flex>
+);
 
-const AssistantAvatar = () => {
-  return (
-    <Flex flexShrink={0}>
-      <Avatar
-        icon={<FaHatWizard />}
-        size="sm"
-        color="white"
-        bg="purple.500"
-        borderRadius="8px"
-        mt={1}
-      />
-    </Flex>
-  );
-};
+const AssistantAvatar = () => (
+  <Flex flexShrink={0}>
+    <Avatar
+      icon={<FaHatWizard />}
+      size="sm"
+      color="white"
+      bg="purple.500"
+      borderRadius="8px"
+      mt={1}
+    />
+  </Flex>
+);
 
-type Message = {
-  role: 'user' | 'assistant';
-  content: string;
-};
+const localStorageKey = 'chatMessages';
 
 export default function Chat() {
-  const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
-  const handleSendMessage = async (): Promise<void> => {
-    try {
-      setIsLoading(true);
-      setMessage('');
-      let newMessages: Message[] = [...messages, { role: 'user', content: message }];
-      setMessages(newMessages);
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ messages: newMessages }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Error sending data');
-      }
-
-      if (response.body) {
-        const reader = response.body.getReader();
-        let incompleteChunk = ''; // Buffer to hold incomplete data
-
-        const processResult = async ({
-          done,
-          value,
-        }: {
-          done: boolean;
-          value?: Uint8Array;
-        }): Promise<void> => {
-          if (done) {
-            console.log('Stream finished.');
-            setIsLoading(false);
-            return;
-          }
-
-          const decoder = new TextDecoder();
-          let chunk = incompleteChunk + decoder.decode(value, { stream: true });
-          let dataObjects = chunk.split('\n');
-
-          // Check if the last object is complete
-          if (!chunk.endsWith('\n')) {
-            incompleteChunk = dataObjects.pop() || ''; // Save incomplete chunk for next iteration
-          } else {
-            incompleteChunk = ''; // Reset if all chunks are complete
-          }
-
-          dataObjects = dataObjects
-            .filter(Boolean)
-            .map((data) => data.replace(/^data: /, ''))
-            .filter((item) => item !== '[DONE]');
-
-          dataObjects.forEach((data) => {
-            try {
-              console.log('Data:', data);
-              const jsonData = JSON.parse(data);
-              if (jsonData.choices) {
-                const { content, role } = jsonData.choices[0].delta;
-
-                if (role === 'assistant') {
-                  newMessages = [...newMessages, { role, content }];
-                  setMessages(newMessages);
-                } else if (content) {
-                  const lastMessage = newMessages[newMessages.length - 1];
-                  lastMessage.content += content;
-                  setMessages([...newMessages.slice(0, -1), lastMessage]);
-                }
-              }
-            } catch (error) {
-              console.error('Error parsing JSON', error);
-            }
-          });
-
-          reader.read().then(processResult);
-        };
-
-        reader.read().then(processResult);
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      setIsLoading(false);
+  // Initialize messages from local storage or default to an empty array if not found
+  const [storedMessages, setStoredMessages] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedMessages = localStorage.getItem(localStorageKey);
+      return savedMessages ? JSON.parse(savedMessages) : [];
     }
-  };
+    return [];
+  });
+
+  const { messages, input, handleInputChange, handleSubmit, isLoading, reload } = useChat({ initialMessages: storedMessages });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(localStorageKey, JSON.stringify(messages));
+    }
+  }, [messages]);
 
   const handleKeyPress = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (message.trim().length <= 0) return;
+    if (input.trim().length <= 0) return;
     if (isLoading) return;
     if (event.shiftKey) return;
     if (event.key === 'Enter') {
       event.preventDefault();
-      handleSendMessage();
+      formRef.current?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
     }
   };
 
   const handleReset = () => {
-    setMessages([]);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(localStorageKey);
+    }
+    window.location.reload()
   };
 
   return (
@@ -179,13 +106,13 @@ export default function Chat() {
           <Text as="p" textAlign="center">
             Bugs shall not pass!! 🐛
           </Text>
-          {messages.map((message, index) => (
+          {messages.map((m, index) => (
             <Fragment key={index}>
               <Divider />
-              <Flex key={index} my={4} w="full">
-                {message.role === 'assistant' ? <AssistantAvatar /> : <UserAvatar />}
+              <Flex my={4} w="full">
+                {m.role === 'assistant' ? <AssistantAvatar /> : <UserAvatar />}
                 <Box px={4} py={2} ml={4}>
-                  <Markdown>{message.content}</Markdown>
+                  <Markdown>{m.content}</Markdown>
                 </Box>
               </Flex>
             </Fragment>
@@ -193,6 +120,9 @@ export default function Chat() {
         </Flex>
       </Flex>
       <Box
+        ref={formRef}
+        as="form"
+        onSubmit={handleSubmit}
         w="full"
         position="absolute"
         pointerEvents="none"
@@ -216,8 +146,8 @@ export default function Chat() {
               bg="rgb(26, 32, 44)"
               resize="none"
               placeholder="Type here..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              value={input}
+              onChange={handleInputChange}
               onKeyDown={handleKeyPress}
               borderRadius={{ base: 0, md: '6px' }}
               borderWidth={{ base: 0, md: '1px' }}
@@ -231,15 +161,23 @@ export default function Chat() {
                 variant="ghost"
                 icon={<VscRefresh />}
                 colorScheme="blue"
-                onClick={handleReset}
+                onClick={() => reload()}
               />
               <IconButton
                 aria-label="Send"
                 disabled={isLoading}
+                type="submit"
                 variant="ghost"
                 icon={<FaPaperPlane />}
                 colorScheme="blue"
-                onClick={handleSendMessage}
+              />
+              <IconButton
+                aria-label="Reset"
+                disabled={isLoading}
+                variant="ghost"
+                icon={<VscTrash/>}
+                colorScheme="red"
+                onClick={() => handleReset()}
               />
             </InputRightElement>
           </InputGroup>
